@@ -103,12 +103,30 @@ const SettingsScreen = ({ language, progress, onNavigate, onChangeLanguage, onUp
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {earnedBadges.map((badge) => {
                 const Icon = badge.icon;
+                const badgeData = BADGE_DEFINITIONS.find(b => b.id === badge.id);
                 return (
                   <div
                     key={badge.id}
                     className="flex items-center gap-3 bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg"
                   >
-                    <Icon className="w-8 h-8 text-purple-600" />
+                    {/* Badge Image or Icon */}
+                    <div className="w-11 h-11 flex items-center justify-center flex-shrink-0">
+                      {badgeData?.imagePath ? (
+                        <img
+                          src={badgeData.imagePath}
+                          alt={badge.name}
+                          className="w-11 h-11 object-contain"
+                          onError={(e) => {
+                            // Fallback to icon if image fails to load
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
+                      <Icon
+                        className={`w-8 h-8 text-purple-600 ${badgeData?.imagePath ? 'hidden' : 'block'}`}
+                      />
+                    </div>
                     <div>
                       <div className="font-semibold text-gray-800">{badge.name}</div>
                       <div className="text-xs text-gray-600">

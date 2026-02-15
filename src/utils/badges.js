@@ -13,6 +13,7 @@ export const POINT_BADGES = [
     type: 'point',
     threshold: 0,
     icon: Star,
+    imagePath: '/badges/badge-milestone1-first_steps.png',
     name: {
       en: 'First Steps',
       ca: 'Primers Passos',
@@ -25,6 +26,7 @@ export const POINT_BADGES = [
     type: 'point',
     threshold: 200,
     icon: Trophy,
+    imagePath: '/badges/badge-milestone2-fractions_master.png',
     name: {
       en: 'Fraction Master',
       ca: 'Mestre de Fraccions',
@@ -37,6 +39,7 @@ export const POINT_BADGES = [
     type: 'point',
     threshold: 400,
     icon: Award,
+    imagePath: '/badges/badge-milestone3-perfect_score.png',
     name: {
       en: 'Perfect Score',
       ca: 'Puntuació Perfecta',
@@ -49,6 +52,7 @@ export const POINT_BADGES = [
     type: 'point',
     threshold: 600,
     icon: Zap,
+    imagePath: '/badges/badge-milestone4-speed_devil.png',
     name: {
       en: 'Speed Demon',
       ca: 'Dimoni de la Velocitat',
@@ -61,6 +65,7 @@ export const POINT_BADGES = [
     type: 'point',
     threshold: 800,
     icon: Target,
+    imagePath: '/badges/badge-milestone5-persistence.png',
     name: {
       en: 'Persistence',
       ca: 'Persistència',
