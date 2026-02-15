@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Star, Trophy } from 'lucide-react';
 import { t } from '../utils/translations';
 import { saveProgress } from '../utils/storage';
-import { checkNewBadges, getEarnedBadges, BADGE_DEFINITIONS } from '../utils/badges';
+import { checkNewBadges, checkLevelBadge, getEarnedBadges, BADGE_DEFINITIONS } from '../utils/badges';
 
 /**
  * Level Complete Screen Component
@@ -41,24 +41,44 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
         level + 1
       );
 
-      // Check for new badges
+      // Check for new point-based badges
       const currentBadgeIds = (progress.badges || []).map(b => b.id || b);
-      const newlyEarned = checkNewBadges(newTotalPoints, currentBadgeIds);
-      
-      const allBadges = getEarnedBadges(newTotalPoints, language);
-      
+      const newPointBadges = checkNewBadges(newTotalPoints, currentBadgeIds);
+
+      // Check for level badge (requires 2+ stars)
+      const levelBadgeId = checkLevelBadge(level, earnedStars, currentBadgeIds);
+
+      // Combine all newly earned badges
+      const newlyEarned = [...newPointBadges];
+      if (levelBadgeId) {
+        newlyEarned.push(levelBadgeId);
+      }
+
+      // Get all point-based badges
+      const allPointBadges = getEarnedBadges(newTotalPoints, language);
+
+      // Combine point badges with existing level badges and new level badge
+      const allBadgeIds = [
+        ...allPointBadges.map(b => b.id),
+        ...currentBadgeIds.filter(id => id.startsWith('level_')),
+        ...(levelBadgeId ? [levelBadgeId] : [])
+      ];
+
+      // Remove duplicates
+      const uniqueBadgeIds = [...new Set(allBadgeIds)];
+
       const newProgress = {
         ...progress,
         currentLevel: newHighestUnlocked,
         highestUnlockedLevel: newHighestUnlocked,
         totalPoints: newTotalPoints,
         completedLevels: newCompletedLevels,
-        badges: allBadges,
+        badges: uniqueBadgeIds,
       };
 
       saveProgress(newProgress);
       onUpdateProgress(newProgress);
-      
+
       if (newlyEarned.length > 0) {
         setNewBadges(newlyEarned);
       }

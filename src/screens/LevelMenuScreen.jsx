@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { ArrowLeft, Lock, Star, Settings } from 'lucide-react';
 import { t } from '../utils/translations';
 import { saveProgress } from '../utils/storage';
-import { checkNewBadges } from '../utils/badges';
+import { checkNewBadges, getTotalBadgeCount } from '../utils/badges';
 import { generateQuestion } from '../utils/questions';
+import BadgesModal from '../components/BadgesModal';
 
 /**
  * Level Menu Screen Component
  * Shows all 15 levels with unlock status, stars, and descriptions
  */
 const LevelMenuScreen = ({ language, progress, onNavigate, onUpdateProgress }) => {
+  const [showBadgesModal, setShowBadgesModal] = useState(false);
   const levelDescriptions = [
     t(language, 'level1'),
     t(language, 'level2'),
@@ -126,14 +128,17 @@ const LevelMenuScreen = ({ language, progress, onNavigate, onUpdateProgress }) =
                 {progress.currentLevel || 1}
               </div>
             </div>
-            <div className="bg-purple-50 rounded-xl p-4 text-center">
+            <button
+              onClick={() => setShowBadgesModal(true)}
+              className="bg-purple-50 rounded-xl p-4 text-center hover:bg-purple-100 transition-colors cursor-pointer"
+            >
               <div className="text-purple-600 font-semibold text-sm mb-1">
                 {t(language, 'badges')}
               </div>
               <div className="text-purple-800 text-2xl font-bold">
-                {progress.badges?.length || 0}
+                {getTotalBadgeCount(progress.totalPoints || 0, progress.badges || [])}
               </div>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -219,6 +224,15 @@ const LevelMenuScreen = ({ language, progress, onNavigate, onUpdateProgress }) =
           </div>
         </div>
       </div>
+
+      {/* Badges Modal */}
+      {showBadgesModal && (
+        <BadgesModal
+          language={language}
+          progress={progress}
+          onClose={() => setShowBadgesModal(false)}
+        />
+      )}
     </div>
   );
 };

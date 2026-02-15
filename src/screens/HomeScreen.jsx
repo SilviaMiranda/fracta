@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { t } from '../utils/translations';
 import { loadLanguage, saveLanguage } from '../utils/storage';
+import { getTotalBadgeCount } from '../utils/badges';
 import Logo from '../components/Logo';
+import BadgesModal from '../components/BadgesModal';
 
 /**
  * Home Screen Component
@@ -10,6 +12,7 @@ import Logo from '../components/Logo';
  */
 const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showBadgesModal, setShowBadgesModal] = useState(false);
   
   const languages = [
     { code: 'en', name: 'English' },
@@ -98,14 +101,17 @@ const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
                 {progress.currentLevel || 1}
               </div>
             </div>
-            <div className="bg-purple-50 rounded-xl p-4 text-center">
+            <button
+              onClick={() => setShowBadgesModal(true)}
+              className="bg-purple-50 rounded-xl p-4 text-center hover:bg-purple-100 transition-colors cursor-pointer"
+            >
               <div className="text-purple-600 font-semibold text-sm mb-1">
                 {t(language, 'badges')}
               </div>
               <div className="text-purple-800 text-2xl font-bold">
-                {progress.badges?.length || 0}
+                {getTotalBadgeCount(progress.totalPoints || 0, progress.badges || [])}
               </div>
-            </div>
+            </button>
           </div>
         )}
 
@@ -149,6 +155,15 @@ const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
           )}
         </div>
       </div>
+
+      {/* Badges Modal */}
+      {showBadgesModal && (
+        <BadgesModal
+          language={language}
+          progress={progress}
+          onClose={() => setShowBadgesModal(false)}
+        />
+      )}
     </div>
   );
 };
