@@ -155,7 +155,7 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
         {newBadges.length > 0 && (
           <div className="bg-purple-50 rounded-xl p-4 mb-6">
             <div className="text-center font-semibold text-purple-800 mb-2">
-              {t(language, 'badges')} {t(language, 'earned')}!
+              {t(language, newBadges.length === 1 ? 'badgeEarned' : 'badgesEarned')}!
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               {newBadges.map((badgeId) => {
