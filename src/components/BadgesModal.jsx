@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { X, Lock } from 'lucide-react';
 import { getAllBadgesWithStatus } from '../utils/badges';
 import { t } from '../utils/translations';
@@ -6,8 +7,10 @@ import { t } from '../utils/translations';
  * Badges Modal Component
  * Displays all badges (point-based and level-specific) in a grid
  * Shows locked/unlocked states
+ * Allows clicking badges to view them in detail
  */
 const BadgesModal = ({ language, progress, onClose }) => {
+  const [selectedBadge, setSelectedBadge] = useState(null);
   const totalPoints = progress?.totalPoints || 0;
   const earnedBadgeIds = progress?.badges || [];
 
@@ -42,15 +45,17 @@ const BadgesModal = ({ language, progress, onClose }) => {
               const isLocked = badge.isLocked;
 
               return (
-                <div
+                <button
                   key={badge.id}
+                  onClick={() => setSelectedBadge(badge)}
                   className={`
                     relative flex flex-col items-center p-3 rounded-xl border-2 transition-all
                     ${isLocked
-                      ? 'bg-gray-100 border-gray-300'
-                      : 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300'
+                      ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                      : 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 hover:border-purple-400 hover:shadow-md cursor-pointer'
                     }
                   `}
+                  disabled={isLocked}
                 >
                   {/* Badge Icon/Image */}
                   <div
@@ -106,7 +111,7 @@ const BadgesModal = ({ language, progress, onClose }) => {
                       {badge.threshold} {t(language, 'points').toLowerCase()}
                     </div>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -117,6 +122,91 @@ const BadgesModal = ({ language, progress, onClose }) => {
           </div>
         </div>
       </div>
+
+      {/* Badge Detail View */}
+      {selectedBadge && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50"
+          onClick={() => setSelectedBadge(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setSelectedBadge(null)}
+                className="text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Large Badge Display */}
+            <div className="flex flex-col items-center">
+              {/* Badge Image/Icon - Large Size */}
+              <div className="relative w-32 h-32 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-50 to-pink-50 mb-6 shadow-lg">
+                {selectedBadge.imagePath ? (
+                  <img
+                    src={selectedBadge.imagePath}
+                    alt={selectedBadge.name}
+                    className="w-28 h-28 object-contain"
+                    onError={(e) => {
+                      // Fallback to icon if image fails to load
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className={`${selectedBadge.imagePath ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
+                  {(() => {
+                    const Icon = selectedBadge.icon;
+                    return <Icon className="w-16 h-16 text-purple-600" />;
+                  })()}
+                </div>
+              </div>
+
+              {/* Badge Name */}
+              <h3 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+                {selectedBadge.name}
+              </h3>
+
+              {/* Badge Details */}
+              <div className="w-full bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-4">
+                {selectedBadge.type === 'level' && (
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 mb-1">
+                      {t(language, 'level')} {selectedBadge.level}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {selectedBadge.requirement}
+                    </div>
+                  </div>
+                )}
+                {selectedBadge.type === 'point' && (
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 mb-1">
+                      {selectedBadge.threshold === 0 ? t(language, 'firstSteps') : `${selectedBadge.threshold} ${t(language, 'points')}`}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {selectedBadge.threshold === 0
+                        ? 'Awarded when you start your journey'
+                        : `Earn ${selectedBadge.threshold} total points to unlock`
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status */}
+              <div className={`text-sm font-semibold ${selectedBadge.isEarned ? 'text-green-600' : 'text-gray-500'}`}>
+                {selectedBadge.isEarned ? '✓ ' + t(language, 'earned') : '🔒 Locked'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
