@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { t } from '../utils/translations';
 import { saveLanguage, saveProgress } from '../utils/storage';
 import { getEarnedBadges, BADGE_DEFINITIONS } from '../utils/badges';
+import packageInfo from '../../package.json';
 
 /**
  * Settings Screen Component
@@ -173,6 +174,11 @@ const SettingsScreen = ({ language, progress, onNavigate, onChangeLanguage, onUp
               </div>
             </div>
           )}
+        </div>
+
+        {/* Version Display */}
+        <div className="mt-6 text-center text-xs text-gray-400">
+          Fracta v{packageInfo.version}
         </div>
       </div>
     </div>
