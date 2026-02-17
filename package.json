@@ -12,7 +12,7 @@
     "version:patch": "npm version patch -m 'Bump version to %s'",
     "version:minor": "npm version minor -m 'Bump version to %s'",
     "version:major": "npm version major -m 'Bump version to %s'",
-    "postversion": "git push && git push --tags && echo '\n✅ Version bumped and pushed!\n📝 Don'\''t forget to:\n  1. Update CHANGELOG.md\n  2. Create GitHub release at https://github.com/SilviaMiranda/fracta/releases\n'"
+    "postversion": "git push && git push --tags && echo -e '\n✅ Version bumped and pushed!\n📝 Don'\\''t forget to:\n  1. Update CHANGELOG.md\n  2. Create GitHub release at https://github.com/SilviaMiranda/fracta/releases\n'"
   },
   "dependencies": {
     "react": "^18.2.0",
