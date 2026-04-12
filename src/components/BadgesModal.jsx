@@ -9,12 +9,12 @@ import { t } from '../utils/translations';
  * Shows locked/unlocked states
  * Allows clicking badges to view them in detail
  */
-const BadgesModal = ({ language, progress, onClose }) => {
+const BadgesModal = ({ language, progress, track = 'fractions', onClose }) => {
   const [selectedBadge, setSelectedBadge] = useState(null);
   const totalPoints = progress?.totalPoints || 0;
   const earnedBadgeIds = progress?.badges || [];
 
-  const allBadges = getAllBadgesWithStatus(totalPoints, earnedBadgeIds, language);
+  const allBadges = getAllBadgesWithStatus(totalPoints, earnedBadgeIds, language, track);
 
   // Separate badges by type
   const pointBadges = allBadges.filter(b => b.type === 'point');

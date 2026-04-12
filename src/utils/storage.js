@@ -1,13 +1,25 @@
 /**
  * Storage utilities for Fracta app
- * Uses browser localStorage (synchronous) instead of Claude.ai storage API
+ * Persists canonical app state under fm_progress (profiles × tracks).
  */
 
-/**
- * Get item from localStorage
- * @param {string} key - Storage key
- * @returns {string|null} - Stored value or null
- */
+import {
+  migrateRawToAppState,
+  createDefaultProfileData,
+  createDefaultTrackProgress,
+  PROFILE_IDS,
+  getProfile,
+} from './storage/migrate';
+
+export {
+  migrateRawToAppState,
+  createDefaultAppState,
+  createDefaultProfileData,
+  createDefaultTrackProgress,
+  PROFILE_IDS,
+  getProfile,
+} from './storage/migrate';
+
 export const getStorageItem = (key) => {
   try {
     return localStorage.getItem(key);
@@ -17,11 +29,6 @@ export const getStorageItem = (key) => {
   }
 };
 
-/**
- * Set item in localStorage
- * @param {string} key - Storage key
- * @param {string} value - Value to store
- */
 export const setStorageItem = (key, value) => {
   try {
     localStorage.setItem(key, value);
@@ -30,10 +37,6 @@ export const setStorageItem = (key, value) => {
   }
 };
 
-/**
- * Remove item from localStorage
- * @param {string} key - Storage key
- */
 export const removeStorageItem = (key) => {
   try {
     localStorage.removeItem(key);
@@ -42,11 +45,6 @@ export const removeStorageItem = (key) => {
   }
 };
 
-/**
- * Get JSON object from localStorage
- * @param {string} key - Storage key
- * @returns {object|null} - Parsed object or null
- */
 export const getStorageJSON = (key) => {
   const value = getStorageItem(key);
   if (!value) return null;
@@ -58,11 +56,6 @@ export const getStorageJSON = (key) => {
   }
 };
 
-/**
- * Set JSON object in localStorage
- * @param {string} key - Storage key
- * @param {object} value - Object to store
- */
 export const setStorageJSON = (key, value) => {
   try {
     setStorageItem(key, JSON.stringify(value));
@@ -71,45 +64,134 @@ export const setStorageJSON = (key, value) => {
   }
 };
 
-/**
- * Load progress data from localStorage
- * @returns {object} - Progress object with defaults
- */
-export const loadProgress = () => {
-  const defaultProgress = {
-    currentLevel: 1,
-    highestUnlockedLevel: 1,
-    totalPoints: 0,
-    completedLevels: {},
-    badges: [],
-    onboardingComplete: false,
-  };
-  
+/** Full persisted document (profiles, active player, schema). */
+export const loadAppState = () => {
   const stored = getStorageJSON('fm_progress');
-  return stored || defaultProgress;
+  return migrateRawToAppState(stored);
 };
 
-/**
- * Save progress data to localStorage
- * @param {object} progress - Progress object to save
- */
-export const saveProgress = (progress) => {
-  setStorageJSON('fm_progress', progress);
+export const saveAppState = (appState) => {
+  setStorageJSON('fm_progress', appState);
 };
 
-/**
- * Load language preference from localStorage
- * @returns {string} - Language code (default: 'ca')
- */
+/** Active profile's fraction track (game + onboarding for fractions). */
+export const loadProgress = () => {
+  const app = loadAppState();
+  const profile = getProfile(app, app.activeProfileId);
+  if (!profile) return createDefaultTrackProgress();
+  return { ...profile.fractions, completedLevels: { ...profile.fractions.completedLevels } };
+};
+
+export const saveProgress = (fractionsProgress) => {
+  const app = loadAppState();
+  const id = app.activeProfileId;
+  const profile = getProfile(app, id) || createDefaultProfileData();
+  const next = {
+    ...app,
+    profiles: {
+      ...app.profiles,
+      [id]: {
+        ...profile,
+        fractions: {
+          ...fractionsProgress,
+          completedLevels: { ...fractionsProgress.completedLevels },
+        },
+      },
+    },
+  };
+  saveAppState(next);
+};
+
+export const loadArithmeticProgress = () => {
+  const app = loadAppState();
+  const profile = getProfile(app, app.activeProfileId);
+  if (!profile) return createDefaultTrackProgress();
+  return { ...profile.arithmetic, completedLevels: { ...profile.arithmetic.completedLevels } };
+};
+
+export const saveArithmeticProgress = (arithmeticProgress) => {
+  const app = loadAppState();
+  const id = app.activeProfileId;
+  const profile = getProfile(app, id) || createDefaultProfileData();
+  const next = {
+    ...app,
+    profiles: {
+      ...app.profiles,
+      [id]: {
+        ...profile,
+        arithmetic: {
+          ...arithmeticProgress,
+          completedLevels: { ...arithmeticProgress.completedLevels },
+        },
+      },
+    },
+  };
+  saveAppState(next);
+};
+
+export const loadAccessibility = () => {
+  const app = loadAppState();
+  const profile = getProfile(app, app.activeProfileId);
+  return profile?.accessibility || { dyslexiaFont: false };
+};
+
+export const saveAccessibility = (accessibility) => {
+  const app = loadAppState();
+  const id = app.activeProfileId;
+  const profile = getProfile(app, id) || createDefaultProfileData();
+  const next = {
+    ...app,
+    profiles: {
+      ...app.profiles,
+      [id]: {
+        ...profile,
+        accessibility: { ...profile.accessibility, ...accessibility },
+      },
+    },
+  };
+  saveAppState(next);
+};
+
+export const setActiveProfileId = (profileId) => {
+  if (!PROFILE_IDS.includes(profileId)) return loadAppState();
+  const app = loadAppState();
+  const next = { ...app, activeProfileId: profileId };
+  saveAppState(next);
+  return next;
+};
+
+/** Persist active player and return the new full app state. */
+export const switchToProfile = (profileId) => {
+  if (!PROFILE_IDS.includes(profileId)) return null;
+  const app = loadAppState();
+  const next = { ...app, activeProfileId: profileId };
+  saveAppState(next);
+  return next;
+};
+
+/** Reset fraction + arithmetic tracks for the active profile; keeps accessibility. */
+export const resetActiveProfileGameProgress = () => {
+  const app = loadAppState();
+  const id = app.activeProfileId;
+  const profile = getProfile(app, id) || createDefaultProfileData();
+  const next = {
+    ...app,
+    profiles: {
+      ...app.profiles,
+      [id]: {
+        ...profile,
+        fractions: createDefaultTrackProgress(),
+        arithmetic: createDefaultTrackProgress(),
+      },
+    },
+  };
+  saveAppState(next);
+};
+
 export const loadLanguage = () => {
   return getStorageItem('fm_language') || 'ca';
 };
 
-/**
- * Save language preference to localStorage
- * @param {string} lang - Language code
- */
 export const saveLanguage = (lang) => {
   setStorageItem('fm_language', lang);
 };
-
