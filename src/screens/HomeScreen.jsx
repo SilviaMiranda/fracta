@@ -1,19 +1,24 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { t } from '../utils/translations';
-import { loadLanguage, saveLanguage } from '../utils/storage';
+import { saveLanguage } from '../utils/storage';
 import { getTotalBadgeCount } from '../utils/badges';
+import { TRACK_ARITHMETIC, TRACK_FRACTIONS } from '../utils/trackConfig';
 import Logo from '../components/Logo';
 import BadgesModal from '../components/BadgesModal';
 
-/**
- * Home Screen Component
- * Landing page with logo, language selector, and start/continue button
- */
-const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
+const HomeScreen = ({
+  language,
+  fractionsProgress,
+  arithmeticProgress,
+  activeProfileId,
+  onSwitchPlayer,
+  onNavigate,
+  onChangeLanguage,
+}) => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
-  const [showBadgesModal, setShowBadgesModal] = useState(false);
-  
+  const [badgesModal, setBadgesModal] = useState(null);
+
   const languages = [
     { code: 'en', name: 'English' },
     { code: 'ca', name: 'Català' },
@@ -27,20 +32,27 @@ const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
     setShowLanguageDropdown(false);
   };
 
-  const handleContinue = () => {
-    if (progress.onboardingComplete) {
-      onNavigate('levels');
+  const goFractions = (toOnboarding) => {
+    if (toOnboarding) {
+      onNavigate('onboarding', { track: TRACK_FRACTIONS });
     } else {
-      onNavigate('onboarding');
+      onNavigate('levels', { track: TRACK_FRACTIONS });
     }
   };
 
-  const currentLanguageName = languages.find(l => l.code === language)?.name || 'Català';
+  const goArithmetic = (toOnboarding) => {
+    if (toOnboarding) {
+      onNavigate('onboarding', { track: TRACK_ARITHMETIC });
+    } else {
+      onNavigate('levels', { track: TRACK_ARITHMETIC });
+    }
+  };
+
+  const currentLanguageName = languages.find((l) => l.code === language)?.name || 'Català';
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-xl p-8 md:p-12 max-w-md w-full">
-        {/* Settings icon */}
         <div className="flex justify-end mb-4">
           <button
             onClick={() => onNavigate('settings')}
@@ -69,80 +81,148 @@ const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
           </button>
         </div>
 
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-4">
           <Logo size="large" />
         </div>
 
-        {/* Title */}
         <h1 className="text-4xl md:text-5xl font-bold text-center mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
           {t(language, 'appTitle')}
         </h1>
-        <p className="text-gray-600 text-center mb-8">
-          {t(language, 'appSubtitle')}
-        </p>
+        <p className="text-gray-600 text-center mb-6">{t(language, 'appSubtitle')}</p>
 
-        {/* Progress stats */}
-        {progress.onboardingComplete && (
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-blue-50 rounded-xl p-4 text-center">
-              <div className="text-blue-600 font-semibold text-sm mb-1">
-                {t(language, 'points')}
-              </div>
-              <div className="text-blue-800 text-2xl font-bold">
-                {progress.totalPoints || 0}
-              </div>
-            </div>
-            <div className="bg-pink-50 rounded-xl p-4 text-center">
-              <div className="text-pink-600 font-semibold text-sm mb-1">
-                {t(language, 'level')}
-              </div>
-              <div className="text-pink-800 text-2xl font-bold">
-                {progress.currentLevel || 1}
-              </div>
-            </div>
+        <div className="mb-6">
+          <div className="text-sm font-medium text-gray-700 mb-2">{t(language, 'playingAs')}</div>
+          <div className="flex gap-2">
             <button
-              onClick={() => setShowBadgesModal(true)}
-              className="bg-purple-50 rounded-xl p-4 text-center hover:bg-purple-100 transition-colors cursor-pointer"
+              type="button"
+              onClick={() => onSwitchPlayer('player_1')}
+              className={`flex-1 py-3 rounded-xl font-semibold border-2 transition-colors ${
+                activeProfileId === 'player_1'
+                  ? 'border-blue-500 bg-blue-50 text-blue-800'
+                  : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
             >
-              <div className="text-purple-600 font-semibold text-sm mb-1">
-                {t(language, 'badges')}
-              </div>
-              <div className="text-purple-800 text-2xl font-bold">
-                {getTotalBadgeCount(progress.totalPoints || 0, progress.badges || [])}
-              </div>
+              {t(language, 'player1')}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSwitchPlayer('player_2')}
+              className={`flex-1 py-3 rounded-xl font-semibold border-2 transition-colors ${
+                activeProfileId === 'player_2'
+                  ? 'border-pink-500 bg-pink-50 text-pink-800'
+                  : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {t(language, 'player2')}
             </button>
           </div>
-        )}
+        </div>
 
-        {/* Continue/Start button */}
-        <button
-          onClick={handleContinue}
-          className="w-full bg-gradient-to-r from-blue-500 to-pink-500 text-white font-semibold py-4 px-6 rounded-xl hover:from-blue-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl mb-6"
-        >
-          {progress.onboardingComplete
-            ? t(language, 'continuePlaying')
-            : t(language, 'startJourney')}
-        </button>
+        <div className="space-y-6 mb-8">
+          <div className="border border-blue-100 rounded-2xl p-4 bg-blue-50/50">
+            <h2 className="font-bold text-gray-800 mb-2">{t(language, 'sectionFractions')}</h2>
+            {fractionsProgress.onboardingComplete && (
+              <div className="grid grid-cols-3 gap-2 mb-4 text-center text-sm">
+                <div className="bg-white rounded-lg p-2">
+                  <div className="text-blue-600 font-medium">{t(language, 'points')}</div>
+                  <div className="font-bold text-blue-900">{fractionsProgress.totalPoints || 0}</div>
+                </div>
+                <div className="bg-white rounded-lg p-2">
+                  <div className="text-pink-600 font-medium">{t(language, 'level')}</div>
+                  <div className="font-bold text-pink-900">{fractionsProgress.currentLevel || 1}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBadgesModal(TRACK_FRACTIONS)}
+                  className="bg-white rounded-lg p-2 hover:bg-purple-50"
+                >
+                  <div className="text-purple-600 font-medium">{t(language, 'badges')}</div>
+                  <div className="font-bold text-purple-900">
+                    {getTotalBadgeCount(
+                      fractionsProgress.totalPoints || 0,
+                      fractionsProgress.badges || [],
+                      TRACK_FRACTIONS
+                    )}
+                  </div>
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                goFractions(!fractionsProgress.onboardingComplete)
+              }
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow"
+            >
+              {fractionsProgress.onboardingComplete
+                ? t(language, 'continueFractions')
+                : t(language, 'startFractions')}
+            </button>
+          </div>
 
-        {/* Language selector */}
+          <div className="border border-pink-100 rounded-2xl p-4 bg-pink-50/50">
+            <h2 className="font-bold text-gray-800 mb-2">{t(language, 'sectionArithmetic')}</h2>
+            {arithmeticProgress.onboardingComplete && (
+              <div className="grid grid-cols-3 gap-2 mb-4 text-center text-sm">
+                <div className="bg-white rounded-lg p-2">
+                  <div className="text-blue-600 font-medium">{t(language, 'points')}</div>
+                  <div className="font-bold text-blue-900">{arithmeticProgress.totalPoints || 0}</div>
+                </div>
+                <div className="bg-white rounded-lg p-2">
+                  <div className="text-pink-600 font-medium">{t(language, 'level')}</div>
+                  <div className="font-bold text-pink-900">{arithmeticProgress.currentLevel || 1}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBadgesModal(TRACK_ARITHMETIC)}
+                  className="bg-white rounded-lg p-2 hover:bg-purple-50"
+                >
+                  <div className="text-purple-600 font-medium">{t(language, 'badges')}</div>
+                  <div className="font-bold text-purple-900">
+                    {getTotalBadgeCount(
+                      arithmeticProgress.totalPoints || 0,
+                      arithmeticProgress.badges || [],
+                      TRACK_ARITHMETIC
+                    )}
+                  </div>
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                goArithmetic(!arithmeticProgress.onboardingComplete)
+              }
+              className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold py-3 px-4 rounded-xl hover:from-pink-600 hover:to-pink-700 transition-all shadow"
+            >
+              {arithmeticProgress.onboardingComplete
+                ? t(language, 'continueArithmetic')
+                : t(language, 'startArithmetic')}
+            </button>
+          </div>
+        </div>
+
         <div className="relative">
           <label className="block text-gray-700 text-sm font-medium mb-2">
             {t(language, 'language')}
           </label>
           <button
+            type="button"
             onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
             className="w-full flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
           >
             <span>{currentLanguageName}</span>
-            <ChevronDown className={`w-5 h-5 transition-transform ${showLanguageDropdown ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`w-5 h-5 transition-transform ${showLanguageDropdown ? 'rotate-180' : ''}`}
+            />
           </button>
-          
+
           {showLanguageDropdown && (
             <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
+                  type="button"
                   onClick={() => handleLanguageChange(lang.code)}
                   className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
                     language === lang.code ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
@@ -156,12 +236,14 @@ const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
         </div>
       </div>
 
-      {/* Badges Modal */}
-      {showBadgesModal && (
+      {badgesModal && (
         <BadgesModal
           language={language}
-          progress={progress}
-          onClose={() => setShowBadgesModal(false)}
+          track={badgesModal}
+          progress={
+            badgesModal === TRACK_ARITHMETIC ? arithmeticProgress : fractionsProgress
+          }
+          onClose={() => setBadgesModal(null)}
         />
       )}
     </div>
@@ -169,4 +251,3 @@ const HomeScreen = ({ language, progress, onNavigate, onChangeLanguage }) => {
 };
 
 export default HomeScreen;
-

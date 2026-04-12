@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { t } from '../utils/translations';
-import { generateQuestion, checkAnswer, parseFraction, formatFraction } from '../utils/questions';
-import { saveProgress } from '../utils/storage';
+import { generateQuestion, checkAnswer } from '../utils/questions';
+import { arithmeticStartingLevel } from '../utils/questions/arithmetic';
+import { getTrackConfig, TRACK_ARITHMETIC } from '../utils/trackConfig';
 
 /**
- * Onboarding Screen Component
- * 10-question assessment to determine starting level
+ * Onboarding Screen — fraction or arithmetic placement quiz.
  */
-const OnboardingScreen = ({ language, progress, onNavigate, onUpdateProgress }) => {
+const OnboardingScreen = ({ language, track, progress, onNavigate, onUpdateProgress }) => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
@@ -16,22 +16,24 @@ const OnboardingScreen = ({ language, progress, onNavigate, onUpdateProgress }) 
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
 
-  // Generate 10 questions of varying difficulty
   useEffect(() => {
+    const cfg = getTrackConfig(track);
+    const n = cfg.onboardingQuestionCount;
     const generatedQuestions = [];
-    for (let i = 0; i < 10; i++) {
-      // Mix difficulty levels 1-6 for assessment
+    for (let i = 0; i < n; i++) {
       const level = Math.floor(i / 2) + 1;
-      generatedQuestions.push(generateQuestion(Math.min(level, 6), language));
+      generatedQuestions.push(
+        generateQuestion(Math.min(level, 6), language, track)
+      );
     }
     setQuestions(generatedQuestions);
-  }, [language]);
+  }, [language, track]);
 
   const handleSubmit = () => {
     if (!userAnswer.trim()) return;
 
     const currentQuestion = questions[currentQuestionIndex];
-    const correct = checkAnswer(userAnswer, currentQuestion.answer);
+    const correct = checkAnswer(userAnswer, currentQuestion.answer, track);
     
     setIsCorrect(correct);
     if (correct) {
@@ -48,28 +50,28 @@ const OnboardingScreen = ({ language, progress, onNavigate, onUpdateProgress }) 
       setIsCorrect(null);
       setShowResult(false);
     } else {
-      // Assessment complete - determine starting level
-      const percentage = (score / questions.length) * 100;
       let startingLevel = 1;
-      
-      if (percentage >= 90) startingLevel = 6;
-      else if (percentage >= 80) startingLevel = 5;
-      else if (percentage >= 70) startingLevel = 4;
-      else if (percentage >= 60) startingLevel = 3;
-      else if (percentage >= 50) startingLevel = 2;
-      else startingLevel = 1;
+      if (track === TRACK_ARITHMETIC) {
+        startingLevel = arithmeticStartingLevel(score, questions.length);
+      } else {
+        const percentage = (score / questions.length) * 100;
+        if (percentage >= 90) startingLevel = 6;
+        else if (percentage >= 80) startingLevel = 5;
+        else if (percentage >= 70) startingLevel = 4;
+        else if (percentage >= 60) startingLevel = 3;
+        else if (percentage >= 50) startingLevel = 2;
+        else startingLevel = 1;
+      }
 
-      // Update progress
       const newProgress = {
         ...progress,
         currentLevel: startingLevel,
         highestUnlockedLevel: startingLevel,
         onboardingComplete: true,
       };
-      
-      saveProgress(newProgress);
+
       onUpdateProgress(newProgress);
-      onNavigate('levels');
+      onNavigate('levels', { track });
     }
   };
 
@@ -100,10 +102,14 @@ const OnboardingScreen = ({ language, progress, onNavigate, onUpdateProgress }) 
         </div>
 
         <h2 className="text-2xl md:text-3xl font-bold text-center mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          {t(language, 'onboardingTitle')}
+          {track === TRACK_ARITHMETIC
+            ? t(language, 'onboardingTitleArithmetic')
+            : t(language, 'onboardingTitle')}
         </h2>
         <p className="text-gray-600 text-center mb-6">
-          {t(language, 'onboardingDescription')}
+          {track === TRACK_ARITHMETIC
+            ? t(language, 'onboardingDescriptionArithmetic')
+            : t(language, 'onboardingDescription')}
         </p>
 
         {/* Progress bar */}
@@ -146,7 +152,11 @@ const OnboardingScreen = ({ language, progress, onNavigate, onUpdateProgress }) 
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !showResult && handleSubmit()}
-            placeholder={t(language, 'answerPlaceholder')}
+            placeholder={
+              track === TRACK_ARITHMETIC
+                ? t(language, 'answerPlaceholderArithmetic')
+                : t(language, 'answerPlaceholder')
+            }
             disabled={showResult}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           />

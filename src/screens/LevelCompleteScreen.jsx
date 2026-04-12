@@ -1,21 +1,30 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Star, Trophy } from 'lucide-react';
 import { t } from '../utils/translations';
-import { saveProgress } from '../utils/storage';
 import { checkNewBadges, checkLevelBadge, getEarnedBadges, BADGE_DEFINITIONS } from '../utils/badges';
+import { getTrackConfig, maxPointsForTrack } from '../utils/trackConfig';
 
 /**
  * Level Complete Screen Component
  * Shows score, stars earned, badges, and recommendations
  */
-const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onUpdateProgress }) => {
+const LevelCompleteScreen = ({
+  language,
+  level,
+  score,
+  progress,
+  track = 'fractions',
+  onNavigate,
+  onUpdateProgress,
+}) => {
   const [stars, setStars] = useState(0);
   const [newBadges, setNewBadges] = useState([]);
   const [hasUpdatedProgress, setHasUpdatedProgress] = useState(false);
 
   useEffect(() => {
-    // Calculate stars based on score (out of 80 possible points)
-    const percentage = (score / 80) * 100;
+    const maxPts = maxPointsForTrack(track);
+    // Calculate stars based on score (percentage of max points for this track)
+    const percentage = maxPts > 0 ? (score / maxPts) * 100 : 0;
     let earnedStars = 0;
     
     if (percentage >= 80) earnedStars = 3;
@@ -43,10 +52,10 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
 
       // Check for new point-based badges
       const currentBadgeIds = (progress.badges || []).map(b => b.id || b);
-      const newPointBadges = checkNewBadges(newTotalPoints, currentBadgeIds);
+      const newPointBadges = checkNewBadges(newTotalPoints, currentBadgeIds, track);
 
       // Check for level badge (requires 2+ stars)
-      const levelBadgeId = checkLevelBadge(level, earnedStars, currentBadgeIds);
+      const levelBadgeId = checkLevelBadge(level, earnedStars, currentBadgeIds, track);
 
       // Combine all newly earned badges
       const newlyEarned = [...newPointBadges];
@@ -55,13 +64,12 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
       }
 
       // Get all point-based badges
-      const allPointBadges = getEarnedBadges(newTotalPoints, language);
+      const allPointBadges = getEarnedBadges(newTotalPoints, language, track);
 
-      // Combine point badges with existing level badges and new level badge
       const allBadgeIds = [
-        ...allPointBadges.map(b => b.id),
-        ...currentBadgeIds.filter(id => id.startsWith('level_')),
-        ...(levelBadgeId ? [levelBadgeId] : [])
+        ...allPointBadges.map((b) => b.id),
+        ...currentBadgeIds.filter((id) => id.startsWith('level_')),
+        ...(levelBadgeId ? [levelBadgeId] : []),
       ];
 
       // Remove duplicates
@@ -76,7 +84,6 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
         badges: uniqueBadgeIds,
       };
 
-      saveProgress(newProgress);
       onUpdateProgress(newProgress);
 
       if (newlyEarned.length > 0) {
@@ -85,45 +92,51 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
       
       setHasUpdatedProgress(true);
     }
-  }, [score, level, progress, language, hasUpdatedProgress]);
+  }, [score, level, progress, language, hasUpdatedProgress, track]);
+
+  const maxPts = maxPointsForTrack(track);
+  const levelCount = getTrackConfig(track).levelCount;
 
   const handleContinue = () => {
-    onNavigate('levels');
+    onNavigate('levels', { track });
   };
 
   const handleRepeat = () => {
-    onNavigate('game', { level });
+    onNavigate('game', { level, track });
   };
 
   const handleNextLevel = () => {
     const nextLevel = level + 1;
     if (nextLevel <= progress.highestUnlockedLevel) {
-      onNavigate('game', { level: nextLevel });
+      onNavigate('game', { level: nextLevel, track });
     } else {
-      onNavigate('levels');
+      onNavigate('levels', { track });
     }
   };
 
-  const percentage = (score / 80) * 100;
+  const percentage = maxPts > 0 ? (score / maxPts) * 100 : 0;
   const recommendation = percentage < 40 ? 'tryAgain' : 'nextLevel';
 
-  const levelDescriptions = [
-    t(language, 'level1'),
-    t(language, 'level2'),
-    t(language, 'level3'),
-    t(language, 'level4'),
-    t(language, 'level5'),
-    t(language, 'level6'),
-    t(language, 'level7'),
-    t(language, 'level8'),
-    t(language, 'level9'),
-    t(language, 'level10'),
-    t(language, 'level11'),
-    t(language, 'level12'),
-    t(language, 'level13'),
-    t(language, 'level14'),
-    t(language, 'level15'),
-  ];
+  const levelDescriptions =
+    track === 'arithmetic'
+      ? Array.from({ length: 12 }, (_, i) => t(language, `arithLevel${i + 1}`))
+      : [
+          t(language, 'level1'),
+          t(language, 'level2'),
+          t(language, 'level3'),
+          t(language, 'level4'),
+          t(language, 'level5'),
+          t(language, 'level6'),
+          t(language, 'level7'),
+          t(language, 'level8'),
+          t(language, 'level9'),
+          t(language, 'level10'),
+          t(language, 'level11'),
+          t(language, 'level12'),
+          t(language, 'level13'),
+          t(language, 'level14'),
+          t(language, 'level15'),
+        ];
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -153,7 +166,9 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
         {/* Score */}
         <div className="bg-gradient-to-r from-blue-50 to-pink-50 rounded-xl p-6 mb-6 text-center">
           <div className="text-sm text-gray-600 mb-2">{t(language, 'score')}</div>
-          <div className="text-4xl font-bold text-gray-800 mb-2">{score}/80</div>
+          <div className="text-4xl font-bold text-gray-800 mb-2">
+            {score}/{maxPts}
+          </div>
           <div className="text-sm text-gray-600">{percentage.toFixed(0)}%</div>
         </div>
 
@@ -218,7 +233,7 @@ const LevelCompleteScreen = ({ language, level, score, progress, onNavigate, onU
           >
             {t(language, 'repeatLevel')}
           </button>
-          {recommendation === 'nextLevel' && level < 15 && (
+          {recommendation === 'nextLevel' && level < levelCount && (
             <button
               onClick={handleNextLevel}
               className="flex-1 bg-gradient-to-r from-blue-500 to-pink-500 text-white font-semibold py-3 px-6 rounded-xl hover:from-blue-600 hover:to-pink-600 transition-all"
