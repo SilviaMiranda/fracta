@@ -5,6 +5,7 @@
  */
 
 import { Star, Trophy, Zap, Target, Award } from 'lucide-react';
+import { TRACK_ARITHMETIC, TRACK_FRACTIONS } from './trackConfig';
 
 // Point-based achievement badges (5 total)
 export const POINT_BADGES = [
@@ -294,17 +295,34 @@ export const LEVEL_BADGES = [
 // Combined badge definitions (20 total)
 export const BADGE_DEFINITIONS = [...POINT_BADGES, ...LEVEL_BADGES];
 
+/** Arithmetic track hides speed-themed point badge (ADR-007). */
+export const getPointBadgesForTrack = (track = TRACK_FRACTIONS) => {
+  if (track === TRACK_ARITHMETIC) {
+    return POINT_BADGES.filter((b) => b.id !== 'speed_demon');
+  }
+  return POINT_BADGES;
+};
+
+export const getLevelBadgesForTrack = (track = TRACK_FRACTIONS) => {
+  if (track === TRACK_ARITHMETIC) {
+    return LEVEL_BADGES.filter((b) => b.level <= 12);
+  }
+  return LEVEL_BADGES;
+};
+
 /**
  * Check which point-based badges should be awarded
  * @param {number} totalPoints - Total points earned
  * @param {Array} currentBadges - Currently earned badge IDs
+ * @param {'fractions'|'arithmetic'} [track]
  * @returns {Array} - Array of newly earned badge IDs
  */
-export const checkNewPointBadges = (totalPoints, currentBadges = []) => {
-  const earnedBadgeIds = currentBadges.map(b => b.id || b);
+export const checkNewPointBadges = (totalPoints, currentBadges = [], track = TRACK_FRACTIONS) => {
+  const earnedBadgeIds = currentBadges.map((b) => b.id || b);
   const newBadges = [];
+  const list = getPointBadgesForTrack(track);
 
-  POINT_BADGES.forEach(badge => {
+  list.forEach((badge) => {
     if (totalPoints >= badge.threshold && !earnedBadgeIds.includes(badge.id)) {
       newBadges.push(badge.id);
     }
@@ -320,14 +338,15 @@ export const checkNewPointBadges = (totalPoints, currentBadges = []) => {
  * @param {Array} currentBadges - Currently earned badge IDs
  * @returns {string|null} - Badge ID if earned, null otherwise
  */
-export const checkLevelBadge = (level, stars, currentBadges = []) => {
+export const checkLevelBadge = (level, stars, currentBadges = [], track = TRACK_FRACTIONS) => {
   if (stars < 2) return null; // Requires 2+ stars
 
-  const levelBadge = LEVEL_BADGES.find(b => b.level === level);
+  const defs = getLevelBadgesForTrack(track);
+  const levelBadge = defs.find((b) => b.level === level);
   if (!levelBadge) return null;
 
-  const earnedBadgeIds = currentBadges.map(b => b.id || b);
-  if (earnedBadgeIds.includes(levelBadge.id)) return null; // Already earned
+  const earnedBadgeIds = currentBadges.map((b) => b.id || b);
+  if (earnedBadgeIds.includes(levelBadge.id)) return null;
 
   return levelBadge.id;
 };
@@ -338,8 +357,8 @@ export const checkLevelBadge = (level, stars, currentBadges = []) => {
  * @param {Array} currentBadges - Currently earned badge IDs
  * @returns {Array} - Array of newly earned badge IDs
  */
-export const checkNewBadges = (totalPoints, currentBadges = []) => {
-  return checkNewPointBadges(totalPoints, currentBadges);
+export const checkNewBadges = (totalPoints, currentBadges = [], track = TRACK_FRACTIONS) => {
+  return checkNewPointBadges(totalPoints, currentBadges, track);
 };
 
 /**
@@ -348,10 +367,10 @@ export const checkNewBadges = (totalPoints, currentBadges = []) => {
  * @param {string} lang - Language code
  * @returns {Array} - Array of badge objects with full data
  */
-export const getEarnedBadges = (totalPoints, lang = 'en') => {
-  return POINT_BADGES
-    .filter(badge => totalPoints >= badge.threshold)
-    .map(badge => ({
+export const getEarnedBadges = (totalPoints, lang = 'en', track = TRACK_FRACTIONS) => {
+  return getPointBadgesForTrack(track)
+    .filter((badge) => totalPoints >= badge.threshold)
+    .map((badge) => ({
       ...badge,
       name: badge.name[lang] || badge.name.en,
     }));
@@ -364,10 +383,16 @@ export const getEarnedBadges = (totalPoints, lang = 'en') => {
  * @param {string} lang - Language code
  * @returns {Array} - Array of all badge objects with status
  */
-export const getAllBadgesWithStatus = (totalPoints, earnedBadgeIds = [], lang = 'en') => {
-  const earnedIds = earnedBadgeIds.map(b => b.id || b);
+export const getAllBadgesWithStatus = (
+  totalPoints,
+  earnedBadgeIds = [],
+  lang = 'en',
+  track = TRACK_FRACTIONS
+) => {
+  const earnedIds = earnedBadgeIds.map((b) => b.id || b);
+  const defs = [...getPointBadgesForTrack(track), ...getLevelBadgesForTrack(track)];
 
-  return BADGE_DEFINITIONS.map(badge => {
+  return defs.map((badge) => {
     let isEarned = false;
 
     if (badge.type === 'point') {
@@ -391,11 +416,10 @@ export const getAllBadgesWithStatus = (totalPoints, earnedBadgeIds = [], lang = 
  * @param {Array} earnedBadgeIds - Array of earned badge IDs (includes level badges)
  * @returns {number} - Total number of earned badges
  */
-export const getTotalBadgeCount = (totalPoints, earnedBadgeIds = []) => {
-  const pointBadgesEarned = POINT_BADGES.filter(b => totalPoints >= b.threshold).length;
-  const levelBadgesEarned = earnedBadgeIds.filter(id =>
-    LEVEL_BADGES.some(lb => lb.id === id)
-  ).length;
+export const getTotalBadgeCount = (totalPoints, earnedBadgeIds = [], track = TRACK_FRACTIONS) => {
+  const pointBadgesEarned = getPointBadgesForTrack(track).filter((b) => totalPoints >= b.threshold).length;
+  const levelDefs = getLevelBadgesForTrack(track);
+  const levelBadgesEarned = earnedBadgeIds.filter((id) => levelDefs.some((lb) => lb.id === id)).length;
 
   return pointBadgesEarned + levelBadgesEarned;
 };
